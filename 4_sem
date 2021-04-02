@@ -1,0 +1,511 @@
+--Многотабличные запросы--
+------------№1------------
+SELECT st.name, st.surname, hb.name
+FROM student st,
+	 hobby hb,
+	 student_hobby sth
+WHERE st.id= sth.student_id
+AND hb.id= sth.hobby_id
+------------№2------------
+SELECT s.name, s.surname, h.name
+FROM student_hobby sh, hobby h, student s
+WHERE h.id = sh.hobby_id AND s.id = sh.id AND sh.date_finish IS NULL
+AND sh.date_start = 
+(
+	SELECT MIN(sh.date_start)
+	FROM student_hobby sh
+)
+------------№3------------
+SELECT DISTINCT st.score, st.name, st.surname, st.date_birth
+FROM student st
+INNER JOIN
+	(
+		SELECT SUM(h.risk) as r_summ, sth.student_id
+		FROM hobby h, 
+			student_hobby sth
+		WHERE h.id= sth.hobby_id
+		GROUP BY sth.student_id
+	)t
+ON st.id = t.student_id
+AND t.r_summ > 0.9
+WHERE st.score > 
+	(
+		SELECT AVG(score)::numeric(3,2)
+		FROM student
+	)	
+------------№4------------
+SELECT st.name, st.surname, st.n_group, st.date_birth, t.name, t.shtime
+FROM student st
+INNER JOIN
+	(
+		SELECT s.student_id, h.name as name,
+			(date_part('years', age(date_finish, date_start)) * 12 + date_part('month', age(date_finish, date_start))) as shtime
+		FROM student_hobby s,
+			hobby h
+		WHERE s.hobby_id = h.id AND s.date_finish IS NOT NULL
+	)t
+ON st.id = t.student_id
+------------№5------------
+SELECT st.name, st.surname, st.n_group, st.date_birth
+FROM student st
+INNER JOIN
+	(
+		SELECT COUNT(s.hobby_id), s.student_id
+		FROM hobby h, 
+			student_hobby s
+		WHERE h.id= s.hobby_id AND s.date_finish IS NULL
+		GROUP BY s.student_id
+	)t
+ON st.id = t.student_id
+WHERE (date_part('years', age(now(), date_birth))) >= 20 
+------------№6------------
+SELECT AVG(st.score)::numeric(3,2), st.n_group
+FROM student st
+INNER JOIN
+	(
+		SELECT COUNT(s.hobby_id), s.student_id
+		FROM hobby h, 
+			student_hobby s
+		WHERE h.id= s.hobby_id AND s.date_finish IS NULL
+		GROUP BY s.student_id
+	)t
+ON st.id = t.student_id
+GROUP BY st.n_group
+------------№7------------
+SELECT h.name, h.risk, extract(month from (justify_days(now() - sh.date_start))) AS time_month
+FROM hobby h, student_hobby sh
+WHERE sh.hobby_id = h.id 
+	AND sh.date_start =
+(
+	SELECT MIN(date_start)
+	FROM student_hobby
+	WHERE date_finish IS NULL
+)
+------------№8------------
+SELECT h.name
+FROM hobby h, student_hobby sh
+INNER JOIN
+(
+	SELECT s.id
+	FROM student s
+	WHERE s.score = 
+	(
+		SELECT MAX(score)
+		FROM student
+	)
+)t
+ON sh.id = t.id
+WHERE h.id = sh.hobby_id
+------------№9------------
+SELECT h.name
+FROM hobby h, student_hobby sh
+INNER JOIN
+(
+	SELECT s.id
+	FROM student s
+	WHERE s.score BETWEEN 3 AND 4 AND s.n_group BETWEEN 2000 AND 3000
+)t
+ON sh.student_id = t.id
+WHERE sh.hobby_id = h.id AND sh.date_finish IS NULL
+------------№10-----------
+SELECT DISTINCT chr(ascii(s.n_group::varchar)) AS course, t.count_h,
+	tt.count_all
+FROM student s
+INNER JOIN
+(
+	SELECT tt.count as count_h, chr(ascii(n_group::varchar)) AS course, id
+	FROM student,
+	(
+		SELECT COUNT(student_id), student_id
+		FROM student_hobby
+		WHERE date_finish IS NULL
+		GROUP BY student_id
+	)tt
+	WHERE id = tt.student_id
+)t
+ON s.id = t.id
+LEFT JOIN
+(
+	SELECT COUNT(tmp.course) as count_all, tmp.course
+	FROM 
+	(
+		SELECT chr(ascii(n_group::varchar)) AS course
+		FROM student
+	)tmp
+	GROUP BY tmp.course
+)tt
+ON tt.course = t.course
+WHERE t.count_h > 0.5 * tt.count_all
+------------№11-----------
+SELECT DISTINCT s.n_group
+FROM student s
+INNER JOIN
+(
+	SELECT COUNT(*), n_group
+	FROM student
+	WHERE score >= 4
+	GROUP BY n_group	
+)tscore
+ON s.n_group = tscore.n_group
+INNER JOIN
+(
+	SELECT COUNT(*), n_group
+	FROM student
+	GROUP BY n_group	
+)t
+ON s.n_group = t.n_group
+WHERE tscore.n_group = t.n_group AND tscore.count >= 0.6 * t.count
+------------№12-----------
+SELECT COUNT(t.hobby_id), t.course
+FROM student s
+INNER JOIN
+(
+	SELECT tt.hobby_id, chr(ascii(n_group::varchar)) AS course, id
+	FROM student
+	INNER JOIN
+	(
+		SELECT hobby_id, student_id
+		FROM student_hobby
+		WHERE date_finish IS NULL
+	)tt
+	ON id = tt.student_id
+)t
+ON s.id = t.id
+GROUP BY t.course
+------------№13-----------
+SELECT s.id, s.surname, s.name, s.date_birth, chr(ascii(s.n_group::varchar)) AS course
+FROM student s
+INNER JOIN
+(
+	SELECT id
+	FROM student
+	WHERE score > 4.5 
+	AND id NOT IN 
+	(
+		SELECT DISTINCT student_id
+		FROM student_hobby
+	)
+)t
+ON s.id = t.id
+ORDER BY chr(ascii(s.n_group::varchar)) ASC, s.date_birth DESC
+------------№14-----------
+CREATE OR REPLACE VIEW stnow5 AS
+SELECT s.*
+FROM student s
+INNER JOIN
+(
+	SELECT DISTINCT student_id AS id
+	FROM student_hobby
+	WHERE date_finish IS NULL AND extract(year from (justify_days(now() - date_start))) >= 5
+)t
+ON s.id = t.id
+------------№15-----------
+CREATE OR REPLACE VIEW count_hobby AS
+SELECT h.name, t.count
+FROM hobby h
+INNER JOIN
+(
+	SELECT COUNT(tmp.s_id), tmp.h_id
+	FROM
+	(
+		SELECT hobby_id as h_id, student_id as s_id
+		FROM student_hobby
+	)tmp
+	GROUP BY tmp.h_id
+)t
+ON h.id = t.h_id
+------------№16-----------
+CREATE OR REPLACE VIEW popular_hobby_id AS
+SELECT h.id
+FROM hobby h, count_hobby ch
+WHERE ch.count = 
+(
+	SELECT MAX(count)
+	FROM count_hobby
+)
+AND h.name = ch.name
+------------№17-----------
+SELECT s.*
+FROM student s
+INNER JOIN
+(
+	SELECT student_id
+	FROM student_hobby, popular_hobby_id ph
+	WHERE hobby_id = ph.id
+)t
+ON s.id = t.student_id
+------------№18-----------
+CREATE OR REPLACE VIEW max_risk AS
+SELECT MAX(risk)
+FROM hobby
+
+SELECT id
+FROM hobby, max_risk
+WHERE risk = max LIMIT 3
+------------№19-----------
+CREATE OR REPLACE VIEW max_time_s AS
+SELECT DISTINCT s.*
+FROM student s
+INNER JOIN
+(
+	SELECT student_id as id
+	FROM student_hobby
+	WHERE date_finish IS NULL AND justify_days(now() - date_start) =
+	(	
+		SELECT MAX(t.time_)
+		FROM
+		(		
+			SELECT justify_days(now() - date_start) as time_
+			FROM student_hobby
+			WHERE date_finish IS NULL
+		)t
+	)
+)tt
+ON s.id = tt.id LIMIT 10
+------------№20-----------
+SELECT DISTINCT n_group
+FROM max_time_s
+------------№21-----------
+CREATE OR REPLACE VIEW score_desc AS
+SELECT id, name, surname 
+FROM student
+ORDER BY score DESC
+------------№22-----------
+CREATE OR REPLACE VIEW count_hobby_course AS
+SELECT COUNT(tmp.s_id), tmp.h_id, tmp.course::integer
+FROM
+(
+	SELECT hobby_id as h_id, student_id as s_id, chr(ascii(n_group::varchar)) as course
+	FROM student_hobby, student s
+	WHERE student_id = s.id
+)tmp
+GROUP BY tmp.h_id, tmp.course
+ORDER BY tmp.course
+---
+CREATE OR REPLACE VIEW tmp_popular_hobby_course AS
+SELECT ch.h_id, ch.course
+FROM count_hobby_course ch
+WHERE ch.course = 3 AND ch.count = (
+										SELECT MAX(ch.count)
+										FROM count_hobby_course ch
+										WHERE ch.course = 3
+									) 
+OR ch.course = 2 AND ch.count = (
+										SELECT MAX(ch.count)
+										FROM count_hobby_course ch
+										WHERE ch.course = 2
+									) 
+OR ch.course = 1 AND ch.count = (
+										SELECT MAX(ch.count)
+										FROM count_hobby_course ch
+										WHERE ch.course = 1
+									)-- LIMIT 3
+---
+CREATE OR REPLACE VIEW popular_hobby_course AS
+SELECT h.name, h.id, tmp.course
+FROM hobby h, tmp_popular_hobby_course tmp
+WHERE h.id = tmp.h_id
+------------№23-----------
+CREATE OR REPLACE VIEW popular_hobby_2 AS
+SELECT h.name, h.id, h.risk
+FROM hobby h, popular_hobby_course tmp
+WHERE h.id = tmp.id AND h.risk =( SELECT MAX(t.risk)
+									FROM
+									(
+										SELECT h.risk
+										FROM hobby h, popular_hobby_course tmp
+										WHERE h.id = tmp.id AND tmp.course = 3 --Поменять на 2
+									)t)
+------------№24-----------
+CREATE OR REPLACE VIEW count_stud_5 AS
+SELECT t.course, t.count_stud, tt.count_5
+FROM 
+(
+	SELECT COUNT(chr(ascii(n_group::varchar))) as count_stud, chr(ascii(n_group::varchar)) as course --Кол-во отл. на каждом курсе
+	FROM student s
+	GROUP BY course
+)t
+LEFT JOIN
+(
+	SELECT COUNT(chr(ascii(n_group::varchar))) as count_5, chr(ascii(n_group::varchar)) as course --Кол-во отл. на каждом курсе
+	FROM student s
+	WHERE score >= 4.5
+	GROUP BY course
+)tt
+ON t.course = tt.course
+ORDER BY t.course
+------------№25-----------
+CREATE OR REPLACE VIEW popular_hobby AS
+SELECT h.name, h.id
+FROM hobby h, count_hobby ch
+WHERE ch.name = h.name AND ch.count = (
+											SELECT MAX(count)
+											FROM count_hobby
+										)
+------------№26-----------
+CREATE OR REPLACE VIEW upd_view AS
+SELECT id, surname, name, n_group 
+FROM student
+WITH CHECK OPTION
+------------№27-----------
+CREATE OR REPLACE VIEW let_score AS
+SELECT chr(ascii(name)) as letter, score
+FROM student
+ORDER BY letter
+
+SELECT letter, MAX(score) as mx_score, MIN(score) as mn_score, AVG(score)::numeric(3,2) as avg_score
+FROM let_score
+GROUP BY letter
+------------№28-----------?
+CREATE OR REPLACE VIEW sur_course_score AS
+SELECT surname, score, chr(ascii(n_group::varchar)) as course 
+FROM student
+ORDER BY surname
+------------№29-----------
+CREATE OR REPLACE VIEW year_birth AS
+SELECT date_part('year', date_birth) as year_birth, id
+FROM student
+ORDER BY year_birth, id
+
+CREATE OR REPLACE VIEW year_birth_count AS
+SELECT y.year_birth, y.id, t.count
+FROM year_birth y
+LEFT JOIN
+(--Сколькими хобби увлекается каждый студент
+	SELECT COUNT(hobby_id), student_id as st_id
+	FROM student_hobby
+	GROUP BY st_id
+)t
+ON y.id = t.st_id
+ORDER BY year_birth, id
+
+SELECT y.year_birth, SUM(y.count)
+FROM year_birth_count y
+GROUP BY year_birth
+ORDER BY year_birth
+------------№30-----------
+CREATE OR REPLACE VIEW letter_risk AS
+SELECT chr(ascii(s.name)) as letter, h.risk
+FROM student s
+LEFT JOIN
+(
+	SELECT student_id, hobby_id
+	FROM student_hobby
+)sh
+ON sh.student_id = s.id  
+LEFT JOIN
+(
+	SELECT risk, id
+	FROM hobby
+)h
+ON sh.hobby_id = h.id
+ORDER BY letter
+
+SELECT letter, MAX(risk), MIN(risk), AVG(risk)::numeric(3,2)
+FROM letter_risk
+GROUP BY letter
+ORDER BY letter
+------------№31-----------
+CREATE OR REPLACE VIEW month_birth AS
+SELECT date_part('month', date_birth) as month_birth, id
+FROM student
+ORDER BY month_birth, id
+
+SELECT month_birth, score
+FROM month_birth mb, student s, student_hobby sh
+WHERE s.id = mb.id AND s.id = sh.student_id 
+	AND sh.hobby_id = (		
+						SELECT id
+						FROM hobby
+						WHERE name = 'Чтение'
+						--В задании футбол, но у меня его нет
+				)
+------------№32-----------
+SELECT s.name, s.surname, s.n_group
+FROM student s, student_hobby sh
+WHERE s.id = sh.student_id
+------------№33-----------
+SELECT surname,
+CASE
+	WHEN position('ов' in surname) = 0 THEN 'Не найдено'
+	ELSE position('ов' in surname)::varchar
+	END as position
+FROM student
+------------№34-----------
+CREATE OR REPLACE VIEW surname_ AS
+SELECT left(surname||'##########', 10)-- as surname
+FROM student
+------------№35-----------
+SELECT trim(both '#' from s.left)
+FROM surname_ s
+------------№36-----------
+SELECT ('5-01-2018'::date -'4-01-2018'::date) as day_apr
+------------№37-----------
+--К сожалению, функция next_day не представлена в postgresql
+SELECT
+CASE extract(dow from current_date)::int
+	WHEN 5 THEN to_char(current_date + 1,'DD-MON-YYYY')
+	WHEN 4 THEN to_char(current_date + 2,'DD-MON-YYYY')
+	WHEN 3 THEN to_char(current_date + 3,'DD-MON-YYYY')
+	WHEN 2 THEN to_char(current_date + 4,'DD-MON-YYYY')
+	WHEN 1 THEN to_char(current_date + 5,'DD-MON-YYYY')
+	WHEN 0 THEN to_char(current_date + 6,'DD-MON-YYYY')
+	ELSE to_char(current_date + 7,'DD-MON-YYYY')--Ну или 0, тк ближайшая суббота в субботу
+	END as date_sa
+------------№38-----------
+SELECT date_trunc('century', now())::date as d_century, 
+to_char(now(), 'WW') as d_week, 
+to_char((now() - '01-01-2021'::date), 'DD')::integer + 1 as d_day
+------------№39-----------
+SELECT s.name, s.surname, h.name,
+CASE
+	WHEN date_finish IS NOT NULL THEN 'Занимается'
+	ELSE 'Закончил'
+	END as Do_NDo
+FROM student s, hobby h, student_hobby sh
+WHERE s.id = sh.student_id AND h.id = sh.hobby_id
+------------№40-----------
+CREATE OR REPLACE VIEW score_group AS
+SELECT ceil(score) as score, n_group
+FROM student
+ORDER BY score ASC
+----
+CREATE OR REPLACE VIEW count_score AS
+SELECT score, COUNT(n_group), n_group
+FROM score_group
+GROUP BY score, n_group
+ORDER BY score ASC
+
+--Как это сделать менее громоздко?
+
+SELECT DISTINCT sg.score, t1112.count as _1112, t2071.count as _2071,
+	t2281.count as _2281, t3281.count as _3281
+FROM score_group sg
+LEFT JOIN
+(
+	SELECT score, count
+	FROM count_score
+	WHERE n_group = 1112
+)t1112
+ON sg.score = t1112.score
+LEFT JOIN
+(
+	SELECT score, count
+	FROM count_score
+	WHERE n_group = 2071
+)t2071
+ON sg.score = t2071.score
+LEFT JOIN
+(
+	SELECT score, count
+	FROM count_score
+	WHERE n_group = 2281
+)t2281
+ON sg.score = t2281.score
+LEFT JOIN
+(
+	SELECT score, count
+	FROM count_score
+	WHERE n_group = 3281
+)t3281
+ON sg.score = t3281.score
