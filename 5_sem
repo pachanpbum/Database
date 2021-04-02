@@ -1,0 +1,182 @@
+--Не доделала, потому что есть вопросы
+--№8 просто без понятия
+--№9 как вставить условие?
+--№14 вроде что-то делает, но он изменил что-то у 22 студентов. Мне страшно (＃￣ω￣)(ಥ﹏ಥ)
+
+--UPDATE & DELETE & INSERT--
+-------------№1-------------
+DELETE 
+FROM student
+WHERE date_birth IS NULL;
+
+SELECT *
+FROM student
+-------------№2-------------
+UPDATE student
+SET date_birth = '01-01-1999'
+WHERE date_birth IS NULL;
+
+SELECT *
+FROM student
+-------------№3-------------
+DELETE 
+FROM student
+WHERE id = 21;
+
+SELECT *
+FROM student
+-------------№4-------------
+UPDATE hobby
+SET risk = risk - 0.1
+WHERE risk = (
+	SELECT MAX(tmp.risk)
+	FROM
+	(
+		SELECT risk
+		FROM hobby h
+		LEFT JOIN
+		(
+			SELECT COUNT(student_id), hobby_id as id
+			FROM student_hobby
+			GROUP BY hobby_id
+		)t
+		ON h.id = t.id
+	)tmp
+);
+
+SELECT *
+FROM hobby
+-------------№5-------------
+UPDATE student
+SET score = s.score + 0.01
+FROM student s
+INNER JOIN
+(
+	SELECT student_id as id
+	FROM student_hobby
+)t
+ON s.id = t.id
+WHERE s.id = t.id;
+
+SELECT *
+FROM student
+-------------№6-------------
+--Не до конца поняла условие
+DELETE
+FROM student_hobby
+WHERE date_finish IS NOT NULL;
+
+SELECT *
+FROM student_hobby
+-------------№7-------------
+INSERT INTO student_hobby 
+(id, student_id, hobby_id, date_start) 
+VALUES (16, 4, 5, '11-15-2009');
+
+SELECT *
+FROM student_hobby
+-------------№8-------------
+--Пока хз как это сделать
+SELECT *
+FROM student_hobby
+ORDER BY student_id
+
+SELECT hobby_id, COUNT(DISTINCT student_id)
+FROM student_hobby
+GROUP BY hobby_id
+HAVING COUNT(DISTINCT student_id)>1
+
+SELECT student_id as s_id, hobby_id as h_id
+FROM student_hobby sh
+ORDER BY student_id
+-------------№9-------------
+--АААААААААААААААААААААААААА
+CREATE OR REPLACE VIEW shh1 AS
+SELECT s.name as s_name, h.name as h_name
+FROM student s, hobby h, student_hobby sh
+WHERE s.id = sh.student_id AND h.id = sh.hobby_id
+WITH CHECK OPTION;
+
+UPDATE shh1
+SET h_name =
+
+CASE
+	WHEN h_name = 'Футбол' THEN 'Бальные танцы'
+	WHEN h_name = 'Баскетбол' THEN 'Вышивание крестиком'
+	END;
+
+SELECT *
+FROM shh
+-------------№10-------------
+INSERT INTO hobby (id, name, risk) 
+VALUES (9, 'Учёба', 1.0);
+
+SELECT *
+FROM hobby
+-------------№11-------------
+UPDATE student_hobby
+SET hobby_id = 9
+FROM student s
+INNER JOIN
+(
+	SELECT id
+	FROM student
+	WHERE score > 3.2
+)t
+ON s.id = t.id
+WHERE student_id = t.id;
+
+SELECT *
+FROM student_hobby
+-------------№12-------------
+UPDATE student
+SET n_group = n_group + 1000
+WHERE n_group < 4000;
+
+SELECT *
+FROM student
+-------------№13-------------
+DELETE 
+FROM student
+WHERE id = 2;
+
+SELECT *
+FROM student
+-------------№14-------------
+--Чет не так
+UPDATE student
+SET score = 5
+FROM student s
+INNER JOIN
+(
+	SELECT DISTINCT student_id as id
+	FROM student_hobby sh
+	INNER JOIN
+	(
+		SELECT student_id as id, 
+		CASE
+			WHEN date_finish IS NULL THEN extract(year from age(now(), date_start))::int
+			ELSE extract(year from age(date_finish, date_start))::int
+			END AS age
+		FROM student_hobby
+	)t
+	ON sh.student_id = t.id
+	WHERE t.age > 10
+)tmp
+ON s.id = tmp.id
+WHERE s.id = tmp.id
+-------------№15-------------
+DELETE
+FROM student
+WHERE id =
+(
+	SELECT s.id
+	FROM student s
+	INNER JOIN
+	(
+		SELECT student_id as id, date_start
+		FROM student_hobby
+	)t
+	ON s.id = t.id
+	WHERE date_birth > date_start
+)
