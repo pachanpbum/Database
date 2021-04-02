@@ -459,7 +459,7 @@ to_char((now() - '01-01-2021'::date), 'DD')::integer + 1 as d_day
 ------------№39-----------
 SELECT s.name, s.surname, h.name,
 CASE
-	WHEN date_finish IS NOT NULL THEN 'Занимается'
+	WHEN date_finish IS NULL THEN 'Занимается'
 	ELSE 'Закончил'
 	END as Do_NDo
 FROM student s, hobby h, student_hobby sh
