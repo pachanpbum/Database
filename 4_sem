@@ -188,6 +188,19 @@ INNER JOIN
 )t
 ON s.id = t.id
 ORDER BY chr(ascii(s.n_group::varchar)) ASC, s.date_birth DESC
+--upd------------------------
+
+SELECT s.id, s.surname, s.name, s.date_birth, chr(ascii(s.n_group::varchar)) AS course
+FROM student s
+LEFT JOIN
+(
+	SELECT student_id as id
+	FROM student_hobby
+)t
+ON s.id = t.id
+WHERE t.id IS NULL AND score > 4.5
+ORDER BY chr(ascii(s.n_group::varchar)) ASC, s.date_birth DESC
+
 ------------№14-----------
 CREATE OR REPLACE VIEW stnow5 AS
 SELECT s.*
