@@ -1,12 +1,12 @@
 --Многотабличные запросы--
-------------№1------------
++------------№1------------
 SELECT st.name, st.surname, hb.name
 FROM student st,
 	 hobby hb,
 	 student_hobby sth
 WHERE st.id= sth.student_id
 AND hb.id= sth.hobby_id
-------------№2------------
++ ------------№2------------
 SELECT s.name, s.surname, h.name
 FROM student_hobby sh, hobby h, student s
 WHERE h.id = sh.hobby_id AND s.id = sh.id AND sh.date_finish IS NULL
@@ -15,7 +15,7 @@ AND sh.date_start =
 	SELECT MIN(sh.date_start)
 	FROM student_hobby sh
 )
-------------№3------------
++ копипаста ------------№3------------
 SELECT DISTINCT st.score, st.name, st.surname, st.date_birth
 FROM student st
 INNER JOIN
@@ -33,7 +33,9 @@ WHERE st.score >
 		SELECT AVG(score)::numeric(3,2)
 		FROM student
 	)	
-------------№4------------
+
+
++ копипаста ------------№4------------
 SELECT st.name, st.surname, st.n_group, st.date_birth, t.name, t.shtime
 FROM student st
 INNER JOIN
@@ -45,7 +47,9 @@ INNER JOIN
 		WHERE s.hobby_id = h.id AND s.date_finish IS NOT NULL
 	)t
 ON st.id = t.student_id
-------------№5------------
+
+
++ можно чуть проще, без подзапроса и хобби таблица в нём не нужна (копипаста) ------------№5------------
 SELECT st.name, st.surname, st.n_group, st.date_birth
 FROM student st
 INNER JOIN
@@ -58,6 +62,8 @@ INNER JOIN
 	)t
 ON st.id = t.student_id
 WHERE (date_part('years', age(now(), date_birth))) >= 20 
+
++ Можно без подзапроса, таблица хобби не нужна (копипаста zharkov?)
 ------------№6------------
 SELECT AVG(st.score)::numeric(3,2), st.n_group
 FROM student st
@@ -71,7 +77,9 @@ INNER JOIN
 	)t
 ON st.id = t.student_id
 GROUP BY st.n_group
-------------№7------------
+
+
++------------№7------------
 SELECT h.name, h.risk, extract(month from (justify_days(now() - sh.date_start))) AS time_month
 FROM hobby h, student_hobby sh
 WHERE sh.hobby_id = h.id 
@@ -81,7 +89,9 @@ WHERE sh.hobby_id = h.id
 	FROM student_hobby
 	WHERE date_finish IS NULL
 )
-------------№8------------
+
+
+Не нужен подзапрос------------№8------------
 SELECT h.name
 FROM hobby h, student_hobby sh
 INNER JOIN
@@ -96,7 +106,9 @@ INNER JOIN
 )t
 ON sh.id = t.id
 WHERE h.id = sh.hobby_id
-------------№9------------
+
+
+Тоже не нужен подзапрос ------------№9------------
 SELECT h.name
 FROM hobby h, student_hobby sh
 INNER JOIN
@@ -107,6 +119,10 @@ INNER JOIN
 )t
 ON sh.student_id = t.id
 WHERE sh.hobby_id = h.id AND sh.date_finish IS NULL
+
+
+Указывать у всех атрибутов таблицу, из которой оно тянется (т.е. s.n_group, а не просто n_group). Слишком активное использование подзапросов, тут нет такой 
+необходимости, только усложняет чтение и понимаение запроса.
 ------------№10-----------
 SELECT DISTINCT chr(ascii(s.n_group::varchar)) AS course, t.count_h,
 	tt.count_all
@@ -136,6 +152,8 @@ LEFT JOIN
 )tt
 ON tt.course = t.course
 WHERE t.count_h > 0.5 * tt.count_all
+
++
 ------------№11-----------
 SELECT DISTINCT s.n_group
 FROM student s
@@ -155,6 +173,9 @@ INNER JOIN
 )t
 ON s.n_group = t.n_group
 WHERE tscore.n_group = t.n_group AND tscore.count >= 0.6 * t.count
+
+
++но опять слишком большая вложенность для такого запроса
 ------------№12-----------
 SELECT COUNT(t.hobby_id), t.course
 FROM student s
@@ -172,6 +193,8 @@ INNER JOIN
 )t
 ON s.id = t.id
 GROUP BY t.course
+
++ можно с LEFT JOIN
 ------------№13-----------
 SELECT s.id, s.surname, s.name, s.date_birth, chr(ascii(s.n_group::varchar)) AS course
 FROM student s
@@ -188,7 +211,9 @@ INNER JOIN
 )t
 ON s.id = t.id
 ORDER BY chr(ascii(s.n_group::varchar)) ASC, s.date_birth DESC
-------------№14-----------
+
+
++------------№14-----------
 CREATE OR REPLACE VIEW stnow5 AS
 SELECT s.*
 FROM student s
@@ -199,7 +224,9 @@ INNER JOIN
 	WHERE date_finish IS NULL AND extract(year from (justify_days(now() - date_start))) >= 5
 )t
 ON s.id = t.id
-------------№15-----------
+
+
++гораздо проще все)------------№15-----------
 CREATE OR REPLACE VIEW count_hobby AS
 SELECT h.name, t.count
 FROM hobby h
@@ -214,6 +241,9 @@ INNER JOIN
 	GROUP BY tmp.h_id
 )t
 ON h.id = t.h_id
+
+
++ (и отдельный за использование 15, хоть ничего и не даёт особо :)
 ------------№16-----------
 CREATE OR REPLACE VIEW popular_hobby_id AS
 SELECT h.id
@@ -224,7 +254,9 @@ WHERE ch.count =
 	FROM count_hobby
 )
 AND h.name = ch.name
-------------№17-----------
+
+
++ ------------№17-----------
 SELECT s.*
 FROM student s
 INNER JOIN
