@@ -1,7 +1,7 @@
 --Не доделала, потому что есть вопросы
 --№8 просто без понятия
 --№9 как вставить условие?
---№14 вроде что-то делает, но он изменил что-то у 22 студентов. Мне страшно (＃￣ω￣)(ಥ﹏ಥ)
+--Мне страшно (＃￣ω￣)(ಥ﹏ಥ)
 
 --UPDATE & DELETE & INSERT--
 -------------№1-------------
@@ -143,8 +143,7 @@ WHERE id = 2;
 SELECT *
 FROM student
 -------------№14-------------
---Чет не так
-UPDATE student
+UPDATE student r
 SET score = 5
 FROM student s
 INNER JOIN
@@ -164,7 +163,7 @@ INNER JOIN
 	WHERE t.age > 10
 )tmp
 ON s.id = tmp.id
-WHERE s.id = tmp.id
+WHERE r.id = tmp.id
 -------------№15-------------
 DELETE
 FROM student
