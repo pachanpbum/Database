@@ -1,6 +1,5 @@
 --Не доделала, потому что есть вопросы
 --№8 просто без понятия
---№9 как вставить условие?
 --Мне страшно (＃￣ω￣)(ಥ﹏ಥ)
 
 --UPDATE & DELETE & INSERT--
@@ -90,23 +89,21 @@ SELECT student_id as s_id, hobby_id as h_id
 FROM student_hobby sh
 ORDER BY student_id
 -------------№9-------------
---АААААААААААААААААААААААААА
-CREATE OR REPLACE VIEW shh1 AS
-SELECT s.name as s_name, h.name as h_name
-FROM student s, hobby h, student_hobby sh
-WHERE s.id = sh.student_id AND h.id = sh.hobby_id
-WITH CHECK OPTION;
+INSERT INTO hobby (id, name, risk) 
+VALUES (9, 'Вышивание крестиком', 0.3);
 
-UPDATE shh1
-SET h_name =
+INSERT INTO hobby (id, name, risk) 
+VALUES (10, 'Бальные танцы', 0.2);
 
+UPDATE student_hobby
+SET hobby_id =
 CASE
-	WHEN h_name = 'Футбол' THEN 'Бальные танцы'
-	WHEN h_name = 'Баскетбол' THEN 'Вышивание крестиком'
+	WHEN hobby_id = 1 THEN 10
+	WHEN hobby_id = 3 THEN 9
 	END;
 
 SELECT *
-FROM shh
+FROM student_hobby
 -------------№10-------------
 INSERT INTO hobby (id, name, risk) 
 VALUES (9, 'Учёба', 1.0);
